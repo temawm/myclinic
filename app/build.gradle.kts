@@ -51,6 +51,7 @@ android {
 
 dependencies {
 
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -66,4 +67,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation ("androidx.compose.ui:ui:1.5.0")
+    implementation ("androidx.compose.material:material:1.5.0")
+    implementation ("androidx.compose.ui:ui-tooling-preview:1.5.0")
 }
