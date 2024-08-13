@@ -1,13 +1,18 @@
 package com.example.myclinic
+import android.net.Uri
+import androidx.compose.ui.platform.LocalContext
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.annotation.ColorRes
+
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,8 +24,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonColors
+
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
@@ -35,16 +41,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-
-
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
+
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
 import com.example.myclinic.ui.theme.MyclinicTheme
+
 
 
 class MainActivity : ComponentActivity() {
@@ -68,10 +74,11 @@ fun MyApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(onLoginClick: (String, String) -> Unit) {
+    val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var emailError by remember { mutableStateOf(false)
-    }
+    var emailError by remember { mutableStateOf(false)}
+    var showPopup by remember { mutableStateOf(false)}
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -103,7 +110,10 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 12.dp, end = 12.dp)
-                .border(1.dp,if (emailError) colorResource(R.color.authorization_mark) else Color.Gray, RoundedCornerShape(15.dp)
+                .border(
+                    1.dp,
+                    if (emailError) colorResource(R.color.authorization_mark) else Color.Gray,
+                    RoundedCornerShape(15.dp)
                 )
             ,
             placeholder = { Text(text = "example@gmail.com", color = Color.Gray) },
@@ -144,7 +154,7 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
                 .wrapContentWidth()
                 .padding(12.dp)
                 .clickable {
-
+                    showPopup = true
                 },
             color = colorResource(id = R.color.authorization_mark),
             style = TextStyle(
@@ -206,7 +216,7 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
                 .wrapContentHeight()
                 .padding(top = 185.dp)
                 .clickable {
-
+                    showPopup = true
                 },
             style = TextStyle(
                 textDecoration = TextDecoration.Underline,
@@ -214,6 +224,43 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
             color = Color.LightGray
 
         )
+        if (showPopup) {
+            Popup(
+                alignment = Alignment.Center,
+                onDismissRequest = { showPopup = false }
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(300.dp)
+                        .height(150.dp)
+                        .background(Color.White, shape = RoundedCornerShape(8.dp))
+                        .border(3.dp, Color.Black, RoundedCornerShape(8.dp))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column {
 
+                        Text(text = "read readme.txt to continue", fontSize = 16.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        BasicText(
+                            text = "Visit my GitHub",
+                            modifier = Modifier
+                                .clickable {
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        data = Uri.parse("https://github.com/temawm")
+                                    }
+                                    context.startActivity(intent)
+                                }
+                                .padding(8.dp),
+                            style = TextStyle(
+                                color = Color.Blue,
+                                fontSize = 16.sp,
+                                textDecoration = TextDecoration.Underline
+                            )
+                        )
+                    }
+                }
+            }
+        }
     }
 }
