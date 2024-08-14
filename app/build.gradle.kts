@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.gms)
 }
 
 android {
@@ -50,8 +51,8 @@ android {
 }
 
 dependencies {
-
-
+    implementation(libs.firebase.auth)
+    implementation(platform(libs.firebase.bom))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

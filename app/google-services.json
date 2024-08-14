@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1080470028224",
+    "project_id": "iclinic-6890f",
+    "storage_bucket": "iclinic-6890f.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1080470028224:android:9dde194ab7aa10aa185225",
+        "android_client_info": {
+          "package_name": "com.example.myclinic"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDoBeGwcTavVOpRPwNIfcijZWikx_l3MXU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -2,8 +2,10 @@ package com.example.myclinic
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
 
+
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 
@@ -14,6 +16,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +28,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.material.MaterialTheme.colors
 import androidx.compose.material3.Button
 
 import androidx.compose.material3.ButtonDefaults
@@ -50,12 +54,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import com.example.myclinic.ui.theme.MyclinicTheme
-
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             MyclinicTheme {
                 MyApp()
@@ -74,11 +81,13 @@ fun MyApp() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(onLoginClick: (String, String) -> Unit) {
+    var auth = Firebase.auth
     val context = LocalContext.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf(false)}
     var showPopup by remember { mutableStateOf(false)}
+    var signInorUp by remember { mutableStateOf(true) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -107,18 +116,14 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
                 email = it
                 emailError = false},
             label = { Text("Email", color = Color.Gray) },
+            singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 12.dp, end = 12.dp)
-                .border(
-                    1.dp,
-                    if (emailError) colorResource(R.color.authorization_mark) else Color.Gray,
-                    RoundedCornerShape(15.dp)
-                )
-            ,
+                .border(1.dp, if (emailError) colorResource(R.color.authorization_mark) else Color.Gray, RoundedCornerShape(15.dp)),
             placeholder = { Text(text = "example@gmail.com", color = Color.Gray) },
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = Color.White,
+            colors = TextFieldDefaults.textFieldColors
+                (containerColor = Color.White,
                 cursorColor = colorResource(id = R.color.authorization_mark),
                 focusedIndicatorColor = Color.White,
                 unfocusedIndicatorColor = Color.White,
@@ -133,6 +138,7 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
             value = password,
             onValueChange = { password = it },
             label = { Text("Password", color = Color.Gray) },
+            singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 12.dp, end = 12.dp)
@@ -164,32 +170,61 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
 
 
         )
-        Spacer(modifier = Modifier.height(24.dp)) // Отступ между полем и кнопкой
-        Button(
-            onClick = {
-                if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){
-                        emailError = true;
-                }
-                else {
-                    emailError = false
-                }
-                      },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(55.dp)
-                .padding(start = 12.dp, end = 12.dp),
-            shape = RoundedCornerShape(15.dp),
+        Spacer(modifier = Modifier.height(24.dp))
+        Row ( modifier = Modifier
+            .fillMaxWidth()
+            .height(55.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center)
+        {
+            Button(
+                onClick = {
+                    signInorUp = true
+                },
+                modifier = Modifier
+                    .width(175.dp)
+                    .height(55.dp)
+                    .padding(start = 12.dp, end = 12.dp)
+                    .border(1.dp, if (signInorUp) colorResource(id = R.color.authorization_mark) else Color.LightGray, RoundedCornerShape(15.dp)),
+                shape = RoundedCornerShape(15.dp),
 
-            colors = ButtonDefaults.buttonColors(
-                containerColor = colorResource(id = R.color.authorization_mark),
-                contentColor = Color.White
-            )
-        ) {
-            Text("Продолжить")
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (signInorUp) colorResource(id = R.color.authorization_mark) else Color.White,
+                    contentColor = if (signInorUp) Color.White else Color.LightGray
+                )
+            ) {
+                Text("Вход")
+            }
+            Button(
+                onClick = {
+                          signInorUp = false
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(55.dp)
+                    .padding(start = 12.dp, end = 12.dp)
+                    .border(1.dp, if (signInorUp) Color.LightGray else colorResource(id = R.color.authorization_mark), RoundedCornerShape(15.dp)),
+                shape = RoundedCornerShape(15.dp),
+
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (signInorUp) Color.White else colorResource(id = R.color.authorization_mark),
+                    contentColor = if (signInorUp) Color.LightGray else Color.White
+                )
+            ) {
+                Text("Регистрация")
+            }
+
         }
         Spacer(modifier = Modifier.height(12.dp))
         Button(
-            onClick = { onLoginClick(email, password) },
+            onClick = {
+                if (!signInorUp) {
+                    signUp(auth, email, password)
+                      }
+                else{
+                    signIn(auth, email, password)
+                      }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(55.dp)
@@ -206,7 +241,7 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
                 contentColor = colorResource(id = R.color.authorization_mark)
             )
         ) {
-            Text("Регистрация")
+            Text("Продолжить")
         }
         Text(
             text = "Privacy policy",
@@ -264,3 +299,27 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
         }
     }
 }
+private fun signUp(auth: FirebaseAuth, email: String, password: String) {
+    auth.createUserWithEmailAndPassword(email,password)
+        .addOnCompleteListener{
+            if (it.isSuccessful){
+                Log.d("MyAuthLog", "SignUp is successful!")
+            }
+            else {
+                Log.d( "MyAuthLog", "SignUp is failure!")
+            }
+        }
+}
+private fun signIn(auth: FirebaseAuth, email: String, password: String) {
+    auth.signInWithEmailAndPassword(email,password)
+        .addOnCompleteListener{
+            if (it.isSuccessful){
+                Log.d("MyAuthLog", "SignIn is successful!")
+            }
+            else {
+                Log.d( "MyAuthLog", "SignIn is failure!")
+            }
+        }
+}
+
+
