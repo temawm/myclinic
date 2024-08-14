@@ -1,9 +1,13 @@
 package com.example.myclinic
+import android.content.Context
 import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
 
 
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -37,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +53,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 
 import androidx.compose.ui.unit.dp
@@ -57,6 +64,7 @@ import com.example.myclinic.ui.theme.MyclinicTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.delay
 
 
 class MainActivity : ComponentActivity() {
@@ -86,8 +94,25 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf(false)}
-    var showPopup by remember { mutableStateOf(false)}
+    var passwordError by remember { mutableStateOf(false)}
+    var showPopup by remember { mutableStateOf( false)}
     var signInorUp by remember { mutableStateOf(true) }
+    var connectionInternet by remember { mutableStateOf(true) }
+    var enabledContinueButton by remember { mutableStateOf(true) }
+    var timer by remember { mutableStateOf(0)    }
+    LaunchedEffect(connectionInternet) {
+        if (!connectionInternet) {
+            for (i in 5 downTo 0) {
+                timer = i
+                delay(1000)
+            }
+            enabledContinueButton = connectionInternet
+        }
+        if (timer == 0){
+            connectionInternet = true
+            enabledContinueButton = true
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -95,7 +120,6 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         Image(
             painter = painterResource(id = R.drawable.mark),
             contentDescription = "authorization_logo",
@@ -114,13 +138,18 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
             value = email,
             onValueChange = {
                 email = it
-                emailError = false},
+                emailError = !validateEmail(email)
+                            },
             label = { Text("Email", color = Color.Gray) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 12.dp, end = 12.dp)
-                .border(1.dp, if (emailError) colorResource(R.color.authorization_mark) else Color.Gray, RoundedCornerShape(15.dp)),
+                .border(
+                    1.dp,
+                    if (emailError) colorResource(R.color.authorization_mark) else Color.Gray,
+                    RoundedCornerShape(15.dp)
+                ),
             placeholder = { Text(text = "example@gmail.com", color = Color.Gray) },
             colors = TextFieldDefaults.textFieldColors
                 (containerColor = Color.White,
@@ -136,22 +165,32 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
         TextField(
             value = password,
-            onValueChange = { password = it },
+            onValueChange = {
+                password = it
+                passwordError = !validatePassword(password)
+            },
             label = { Text("Password", color = Color.Gray) },
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 12.dp, end = 12.dp)
-                .border(1.dp, Color.Gray, RoundedCornerShape(15.dp)),
-            placeholder = { Text(text = "*********", color = Color.Gray) },
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = Color.White,
+                .border(
+                    1.dp,
+                    if (passwordError) colorResource(R.color.authorization_mark) else Color.Gray,
+                    RoundedCornerShape(15.dp)
+                ),
+            placeholder = { Text(text = "********", color = Color.Gray) },
+            visualTransformation = PasswordVisualTransformation(),
+            colors = TextFieldDefaults.textFieldColors
+                (containerColor = Color.White,
                 cursorColor = colorResource(id = R.color.authorization_mark),
                 focusedIndicatorColor = Color.White,
                 unfocusedIndicatorColor = Color.White,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black
+
+                focusedTextColor = if (passwordError) colorResource(id = R.color.authorization_mark) else Color.Black,
+                unfocusedTextColor = if (passwordError) colorResource(id = R.color.authorization_mark) else Color.Black
             )
+
         )
         Text(
             text = "Забыли пароль?",
@@ -185,7 +224,11 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
                     .width(175.dp)
                     .height(55.dp)
                     .padding(start = 12.dp, end = 12.dp)
-                    .border(1.dp, if (signInorUp) colorResource(id = R.color.authorization_mark) else Color.LightGray, RoundedCornerShape(15.dp)),
+                    .border(
+                        1.dp,
+                        if (signInorUp) colorResource(id = R.color.authorization_mark) else Color.LightGray,
+                        RoundedCornerShape(15.dp)
+                    ),
                 shape = RoundedCornerShape(15.dp),
 
                 colors = ButtonDefaults.buttonColors(
@@ -203,7 +246,11 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
                     .fillMaxWidth()
                     .height(55.dp)
                     .padding(start = 12.dp, end = 12.dp)
-                    .border(1.dp, if (signInorUp) Color.LightGray else colorResource(id = R.color.authorization_mark), RoundedCornerShape(15.dp)),
+                    .border(
+                        1.dp,
+                        if (signInorUp) Color.LightGray else colorResource(id = R.color.authorization_mark),
+                        RoundedCornerShape(15.dp)
+                    ),
                 shape = RoundedCornerShape(15.dp),
 
                 colors = ButtonDefaults.buttonColors(
@@ -218,30 +265,48 @@ fun LoginScreen(onLoginClick: (String, String) -> Unit) {
         Spacer(modifier = Modifier.height(12.dp))
         Button(
             onClick = {
-                if (!signInorUp) {
-                    signUp(auth, email, password)
-                      }
-                else{
-                    signIn(auth, email, password)
-                      }
-            },
+                if (validateEmail(email)) {
+                    if (validatePassword(password)) {
+                        if (isNetworkAvailable(context)) {
+                            connectionInternet = true
+                            enabledContinueButton = true
+                            if (!signInorUp) {
+                                signUp(auth, email, password)
+                            } else {
+                                signIn(auth, email, password)
+                            }
+                        } else {
+                            connectionInternet = false
+                            enabledContinueButton = false
+                        }
+                    }
+                    else {
+                        passwordError = true
+                    }
+                }
+                else {
+                  emailError = true
+                }
+                      },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(55.dp)
                 .padding(start = 12.dp, end = 12.dp)
                 .border(
-                    1.dp,
-                    colorResource(id = R.color.authorization_mark),
-                    RoundedCornerShape(15.dp)
+                    1.dp, colorResource(id = R.color.authorization_mark), RoundedCornerShape(15.dp)
                 ),
             shape = RoundedCornerShape(15.dp),
-
+            enabled = enabledContinueButton,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.White,
                 contentColor = colorResource(id = R.color.authorization_mark)
             )
         ) {
-            Text("Продолжить")
+            Text(
+                text = if (enabledContinueButton) "Продолжить" else "Нет подключения к сети.\nПовторное подключение через $timer секунд.",
+                color = colorResource(id = R.color.authorization_mark),
+                textAlign = TextAlign.Center
+                )
         }
         Text(
             text = "Privacy policy",
@@ -321,5 +386,31 @@ private fun signIn(auth: FirebaseAuth, email: String, password: String) {
             }
         }
 }
-
+private fun validateEmail(email: String): Boolean{
+    if (android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){
+        return true
+    }
+    else {
+        return false
+    }
+}
+private fun validatePassword(password: String): Boolean{
+    if (password.length >= 8){
+        return true
+    }
+    else {
+        return false
+    }
+}
+fun isNetworkAvailable(context: Context): Boolean {
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val network = connectivityManager.activeNetwork ?: return false
+    val activeNetwork = connectivityManager.getNetworkCapabilities(network) ?: return false
+    return when {
+        activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+        activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+        activeNetwork.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+        else -> false
+    }
+}
 
