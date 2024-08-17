@@ -4,8 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.myclinic.screens.HomeScreenChilds.HomeScreen
+import com.example.myclinic.screens.HomeScreenChilds.NavGraphForHomeScreen
 import com.example.myclinic.screens.LoginScreen
-import com.example.myclinic.screens.HomeScreen
+
 
 @Composable
 fun AppNavGraph() {
@@ -15,10 +17,8 @@ fun AppNavGraph() {
         composable("LoginScreen") {
                 LoginScreen(navController = navController)
         }
-        composable("HomeScreen"){
-            HomeScreen {
-                navController.navigate("ProfileScreen")
-            }
+        composable( "HomeScreen"){
+                HomeScreen()
         }
     }
 

@@ -1,6 +1,7 @@
 package com.example.myclinic.screens
 import android.content.Context
 import android.net.Uri
+import com.example.myclinic.screens.HomeScreenChilds.HomeScreen
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.net.ConnectivityManager
@@ -34,6 +35,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -70,7 +72,7 @@ fun LoginScreen(navController: NavController) {
     var signInorUp by remember { mutableStateOf(true) }
     var connectionInternet by remember { mutableStateOf(true) }
     var enabledContinueButton by remember { mutableStateOf(true) }
-    var timer by remember { mutableStateOf(0)    }
+    var timer by remember { mutableIntStateOf(0) }
     var failedSignIn by remember { mutableStateOf(false) }
     LaunchedEffect(connectionInternet) {
         if (!connectionInternet) {
@@ -243,7 +245,7 @@ fun LoginScreen(navController: NavController) {
                             connectionInternet = true
                             enabledContinueButton = true
                             if (!signInorUp) {
-                                signUp(auth, email, password, navController)
+                                signUp(auth, email, password)
                             } else {
                                 signIn(auth, email, password, navController)
                             }
@@ -336,7 +338,7 @@ fun LoginScreen(navController: NavController) {
         }
     }
 }
-private fun signUp(auth: FirebaseAuth, email: String, password: String, navController: NavController) {
+private fun signUp(auth: FirebaseAuth, email: String, password: String) {
     auth.createUserWithEmailAndPassword(email, password)
         .addOnCompleteListener {
             if (it.isSuccessful) {
@@ -359,21 +361,11 @@ private fun signIn(auth: FirebaseAuth, email: String, password: String, navContr
         }
 }
 
-private fun validateEmail(email: String): Boolean{
-    if (android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()){
-        return true
-    }
-    else {
-        return false
-    }
+private fun validateEmail(email: String): Boolean {
+    return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
 }
 private fun validatePassword(password: String): Boolean{
-    if (password.length >= 8){
-        return true
-    }
-    else {
-        return false
-    }
+    return password.length >= 8
 }
 fun isNetworkAvailable(context: Context): Boolean {
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
