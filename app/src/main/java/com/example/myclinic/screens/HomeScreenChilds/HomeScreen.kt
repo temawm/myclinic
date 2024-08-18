@@ -54,7 +54,7 @@ fun BottomNavigation(navController: NavController){
                 },
                 label = {
                     Text(text = item.title,
-                        color = Color.White,
+                        color = colorResource(id = R.color.authorization_mark),
                         fontSize = 9.sp
                     )
                 },
