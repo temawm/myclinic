@@ -8,4 +8,6 @@
     <color name="black">#DF93B1</color>
     <color name="white">#FFFFFFFF</color>
     <color name="authorization_mark">#c8251e</color>
+    <color name="authorization_mark_low_opacity">#66C8251E</color>
+    <color name="LightLightGray">#929083</color>
 </resources>
