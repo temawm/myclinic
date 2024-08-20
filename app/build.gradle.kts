@@ -51,6 +51,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.firebase.firestore)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.firebase.auth)
     implementation(platform(libs.firebase.bom))

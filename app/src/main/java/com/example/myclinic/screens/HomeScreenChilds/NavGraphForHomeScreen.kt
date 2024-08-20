@@ -6,6 +6,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 
+
 @Composable
 fun NavGraphForHomeScreen(navHostController: NavHostController) {
     NavHost(navHostController, startDestination = "CatalogScreen") {
@@ -16,10 +17,16 @@ fun NavGraphForHomeScreen(navHostController: NavHostController) {
             ProfileScreen()
         }
         composable("CatalogScreen") {
-            CatalogScreen()
+            CatalogScreen( navHostController = navHostController)
         }
         composable("CalendarScreen") {
             CalendarScreen()
+        }
+        composable("DoctorScreen/{specialization}") { backStackEntry ->
+            val specialization = backStackEntry.arguments?.getString("specialization")
+            specialization?.let {
+                DoctorScreen(specialization = it)
+            }
         }
     }
 }

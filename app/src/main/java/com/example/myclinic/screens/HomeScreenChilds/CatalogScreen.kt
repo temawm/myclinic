@@ -22,13 +22,26 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.example.myclinic.R
+import com.google.firebase.firestore.firestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+
+data class Doctor(
+    val Имя: String = "",
+    val Профессия: String = "",
+    val Опыт: Int = 0,
+    val Рейтинг: Double = 0.0,
+    val profilePictureUrl: String = ""
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CatalogScreen() {
+fun CatalogScreen(navHostController: NavHostController) {
     var search by remember { mutableStateOf("") }
-    val doctors = mapOf(
+    val doctorsNames = mapOf(
         "Gynecologist" to "Гинеколог",
         "Allergist" to "Аллерголог",
         "Anesthesiologist" to "Анестезиолог",
@@ -64,7 +77,7 @@ fun CatalogScreen() {
         "Endoscopist" to "Эндоскопист"
     )
 
-    val filteredDoctors = doctors.filter { (_, value) ->
+    val filteredDoctors = doctorsNames.filter { (_, value) ->
         value.contains(search, ignoreCase = true)
     }
 
@@ -131,7 +144,9 @@ fun CatalogScreen() {
             items(filteredDoctors.size) { index ->
                 val (key, value) = filteredDoctors.entries.elementAt(index)
                 Button(
-                    onClick = {},
+                    onClick = {
+                        navHostController.navigate("DoctorScreen/$value")
+                    },
                     modifier = Modifier
                         .padding(4.dp)
                         .fillMaxWidth()
