@@ -47,7 +47,9 @@ fun BottomNavigation(navController: NavController){
                 selected = currentRoute == item.route,
                 onClick = {
                     Log.d("HomeScreen.kt","navController started")
-                   navController.navigate(item.route)
+                   navController.navigate(item.route){
+                       launchSingleTop = true
+                   }
                 },
                 icon = {
                     Icon(painter = painterResource(id = item.iconId ), contentDescription = "Icon")

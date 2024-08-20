@@ -354,7 +354,11 @@ private fun signIn(auth: FirebaseAuth, email: String, password: String, navContr
         .addOnCompleteListener {
             if (it.isSuccessful) {
                 Log.d("MyAuthLog", "SignIn is successful!")
-                navController.navigate("HomeScreen")
+                navController.navigate("HomeScreen"){
+                    popUpTo("LoginScreen") {
+                        inclusive = true
+                    }
+                }
             } else {
                 Log.d("MyAuthLog", "SignIn is failure!")
             }
