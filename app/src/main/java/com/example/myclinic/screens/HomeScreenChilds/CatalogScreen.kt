@@ -67,7 +67,7 @@ fun CatalogScreen(navHostController: NavHostController) {
         "Sleep Specialist" to "Сомнолог",
         "Therapist" to "Терапевт",
         "Traumatologist" to "Травматолог",
-        "Ultrasound Specialist" to "УЗИ",
+        "Ultrasound Specialist" to "УЗИ-специалист",
         "Urologist" to "Уролог",
         "Physiotherapist" to "Физиотерапевт",
         "Phlebologist" to "Флеболог",

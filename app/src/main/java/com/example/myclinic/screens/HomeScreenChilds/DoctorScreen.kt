@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.runtime.*
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -49,15 +52,22 @@ fun DoctorScreen(specialization: String) {
     LaunchedEffect(specialization) {
         isLoading = true
         try {
+            Log.d("DoctorScreen", "Запрос врачей по специализации: $specialization")
             val querySnapshot = firestore.collection("Doctors")
                 .whereEqualTo("Профессия", specialization)
                 .get()
                 .await()
 
+            if (querySnapshot.isEmpty) {
+                Log.d("DoctorScreen", "Врачи не найдены для специализации: $specialization")
+            } else {
+                Log.d("DoctorScreen", "Найдено врачей: ${querySnapshot.size()} для специализации: $specialization")
+            }
+
             doctors = querySnapshot.toObjects(Doctor::class.java)
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.d("DoctorScreen","querySnapshot is error.")
+            Log.d("DoctorScreen", "Ошибка выполнения запроса: ${e.message}")
         } finally {
             isLoading = false
         }
@@ -70,9 +80,29 @@ fun DoctorScreen(specialization: String) {
         horizontalAlignment = Alignment.CenterHorizontally
     ){
         if (isLoading) {
-            Text(text = "Загрузка...", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center, color = Color.Gray)
-            CircularProgressIndicator( modifier = Modifier.size(64.dp), color = colorResource(id = R.color.authorization_mark))
-        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Загрузка...",
+                    modifier = Modifier
+                        .wrapContentHeight()
+                        .wrapContentWidth(),
+                    textAlign = TextAlign.Center,
+                    color = Color.Gray,
+                    fontSize = 24.sp
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                CircularProgressIndicator(
+                    modifier = Modifier.size(64.dp),
+                    color = colorResource(id = R.color.authorization_mark)
+                )
+            }
+            } else {
             for (doctor in doctors) {
                 Card(
                     modifier = Modifier
