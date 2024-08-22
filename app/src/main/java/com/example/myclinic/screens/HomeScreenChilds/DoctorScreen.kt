@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.MaterialTheme.colors
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -118,6 +121,7 @@ fun DoctorScreen(specialization: String) {
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Spacer(modifier = Modifier.width(14.dp))
                         Image(
                             painter = painterResource(id = R.drawable.mark),
                             contentDescription = "Doctor Photo",
@@ -132,18 +136,20 @@ fun DoctorScreen(specialization: String) {
                                 .fillMaxWidth()
                                 .padding(start = 8.dp)
                         ) {
+                            Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = doctor.Имя,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Опыт: ${doctor.Опыт} лет",
                                 fontSize = 16.sp,
                                 color = Color.Gray
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth(),
@@ -158,12 +164,42 @@ fun DoctorScreen(specialization: String) {
                                 Icon(
                                     painter = painterResource(id = R.drawable.starforrating),
                                     contentDescription = "Star",
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(22.dp),
                                     tint = Color.Yellow
                                 )
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Button(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(55.dp)
+                            .padding(start = 44.dp, end = 44.dp)
+                            .border(
+                                1.dp,
+                                colorResource(id = R.color.authorization_mark_low_opacity),
+                                RoundedCornerShape(25.dp)
+                            ),
+                        onClick = {
+
+                        },
+                        shape = RoundedCornerShape(15.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = colorResource(id = R.color.authorization_mark)
+
+                        )
+                    ){
+                        Text(
+                            text = "Запись к врачу",
+                            color = colorResource(id = R.color.authorization_mark),
+                            textAlign = TextAlign.Center,
+                            fontSize = 16.sp
+
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
