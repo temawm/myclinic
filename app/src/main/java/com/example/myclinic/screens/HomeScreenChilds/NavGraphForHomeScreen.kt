@@ -1,12 +1,15 @@
 package com.example.myclinic.screens.HomeScreenChilds
 
 import CatalogScreen
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun NavGraphForHomeScreen(navHostController: NavHostController) {
     NavHost(navHostController, startDestination = "CatalogScreen") {
@@ -20,7 +23,7 @@ fun NavGraphForHomeScreen(navHostController: NavHostController) {
             CatalogScreen( navHostController = navHostController)
         }
         composable("CalendarScreen") {
-            CalendarScreen()
+            CalendarScreen(appointment = false)
         }
         composable("DoctorScreen/{specialization}") { backStackEntry ->
             val specialization = backStackEntry.arguments?.getString("specialization")
