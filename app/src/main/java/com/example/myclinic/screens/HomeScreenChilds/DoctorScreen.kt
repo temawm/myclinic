@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.MaterialTheme.colors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -45,9 +44,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
 
 @Composable
-fun DoctorScreen(specialization: String) {
+fun DoctorScreen(specialization: String, navHostController: NavHostController) {
     val firestore = Firebase.firestore
     var doctors by remember { mutableStateOf(emptyList<Doctor>()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -182,6 +182,7 @@ fun DoctorScreen(specialization: String) {
                                 RoundedCornerShape(25.dp)
                             ),
                         onClick = {
+                            navHostController.navigate("CalendarScreen/${doctor.Имя}")
 
                         },
                         shape = RoundedCornerShape(15.dp),

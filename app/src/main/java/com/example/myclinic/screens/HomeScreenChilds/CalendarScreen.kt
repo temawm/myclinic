@@ -1,6 +1,7 @@
 package com.example.myclinic.screens.HomeScreenChilds
 
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +25,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myclinic.R
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import org.w3c.dom.Text
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -33,10 +39,9 @@ import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CalendarScreen(appointment: Boolean) {
+fun CalendarScreen(doctorName: String) {
     var grayText by remember { mutableStateOf(true) }
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
-
     fun previousMonth() {
         currentMonth = currentMonth.minusMonths(1)
     }
@@ -46,6 +51,9 @@ fun CalendarScreen(appointment: Boolean) {
     }
 
     val daysInMonth = generateDaysInMonthWithPadding(currentMonth)
+    val firestore = Firebase.firestore
+    var timeSlots by remember { mutableStateOf(emptyMap<String, Boolean>()) }
+    val scope = rememberCoroutineScope()
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -67,7 +75,11 @@ fun CalendarScreen(appointment: Boolean) {
                 tint = Color.Black,
                 modifier = Modifier
                     .size(40.dp)
-                    .border(1.dp, colorResource(id = R.color.authorization_mark), RoundedCornerShape(13.dp))
+                    .border(
+                        1.dp,
+                        colorResource(id = R.color.authorization_mark),
+                        RoundedCornerShape(13.dp)
+                    )
                     .clickable { previousMonth() }
             )
             Column(
@@ -95,7 +107,11 @@ fun CalendarScreen(appointment: Boolean) {
                 tint = Color.Black,
                 modifier = Modifier
                     .size(40.dp)
-                    .border(1.dp, colorResource(id = R.color.authorization_mark), RoundedCornerShape(13.dp))
+                    .border(
+                        1.dp,
+                        colorResource(id = R.color.authorization_mark),
+                        RoundedCornerShape(13.dp)
+                    )
                     .clickable { nextMonth() }
             )
 
@@ -107,9 +123,10 @@ fun CalendarScreen(appointment: Boolean) {
                 Text(
                     text = day,
                     fontSize = 16.sp,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f),
                     textAlign = TextAlign.Center,
-                    color = Color.LightGray
+                    color = Color.LightGray,
                 )
             }
         }
@@ -129,7 +146,41 @@ fun CalendarScreen(appointment: Boolean) {
                                 .clip(CircleShape)
                                 .background(
                                     if (day.isCurrentDay) colorResource(id = R.color.authorization_mark_low_opacity) else Color.Transparent
-                                ),
+                                )
+                                .clickable {
+                                    Log.d("Box","button_is_clicked")
+                                    scope.launch {
+                                        val doctorId = getDoctorIdByName(doctorName, firestore)
+                                        Log.d("getDoctorID", "$doctorId")
+                                        if (doctorId != null) {
+                                            val selectedDate =
+                                                currentMonth.atDay(day.dayOfMonth ?: 1)
+                                            createAppointmentDocumentIfNeeded(
+                                                doctorId,
+                                                selectedDate
+                                            )
+
+                                            val appointmentDocRef = firestore
+                                                .collection("Doctors")
+                                                .document(doctorId)
+                                                .collection("DoctorAppointmentCalendar")
+                                                .document(selectedDate.toString())
+
+                                            appointmentDocRef
+                                                .get()
+                                                .addOnSuccessListener { document ->
+                                                    if (document.exists()) {
+                                                        val slots =
+                                                            document.data?.mapValues { entry ->
+                                                                (entry.value as Map<String, Any>)["booked"] as Boolean
+                                                            } ?: emptyMap()
+                                                        timeSlots = slots
+                                                    }
+                                                }
+                                        }
+                                    }
+                                },
+
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -155,7 +206,7 @@ fun generateDaysInMonthWithPadding(currentMonth: YearMonth): List<Day> {
     val daysInMonth = currentMonth.lengthOfMonth()
 
     val dayOfWeekOffset =
-        firstDayOfMonth.dayOfWeek.value - 1 
+        firstDayOfMonth.dayOfWeek.value - 1
     val previousMonth = currentMonth.minusMonths(1)
     val daysInPreviousMonth = previousMonth.lengthOfMonth()
 
@@ -180,3 +231,46 @@ fun generateDaysInMonthWithPadding(currentMonth: YearMonth): List<Day> {
 }
 
 data class Day(val dayOfMonth: Int?, val isCurrentDay: Boolean)
+
+suspend fun createAppointmentDocumentIfNeeded(DoctorID: String, selectedDate: LocalDate) {
+    val firestore = Firebase.firestore
+    val appointmentDocRef = firestore.collection("Doctors")
+        .document(DoctorID)
+        .collection("DoctorAppointmentCalendar")
+        .document(selectedDate.toString())
+    Log.d("suspend", selectedDate.toString())
+    Log.d("suspend", DoctorID)
+    val documentSnapshot = appointmentDocRef.get().await()
+    if (!documentSnapshot.exists()) {
+        val timeSlots = generateTimeSlots()
+        appointmentDocRef.set(timeSlots)
+    }
+}
+
+fun generateTimeSlots(): Map<String, Map<String, Any>> {
+    val timeSlots = mutableMapOf<String, Map<String, Any>>()
+    for (hour in 10..15) {
+        val time = String.format("%02d:00", hour)
+        timeSlots[time] = mapOf("booked" to false, "patientID" to "")
+    }
+    return timeSlots
+}
+
+suspend fun getDoctorIdByName(doctorName: String, firestore: FirebaseFirestore): String? {
+    return try {
+        val querySnapshot = firestore.collection("Doctors")
+            .whereEqualTo("Имя", doctorName)
+            .get()
+            .await()
+
+        if (!querySnapshot.isEmpty) {
+            // Предположим, что имя уникально, поэтому берем первый найденный документ
+            querySnapshot.documents.first().id
+        } else {
+            null // Врач с таким именем не найден
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}

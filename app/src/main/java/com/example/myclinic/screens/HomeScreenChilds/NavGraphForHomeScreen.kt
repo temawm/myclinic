@@ -22,13 +22,16 @@ fun NavGraphForHomeScreen(navHostController: NavHostController) {
         composable("CatalogScreen") {
             CatalogScreen( navHostController = navHostController)
         }
-        composable("CalendarScreen") {
-            CalendarScreen(appointment = false)
+        composable("CalendarScreen/{doctorName}") { backStackEntry ->
+            val doctorName = backStackEntry.arguments?.getString("doctorName")
+            doctorName?.let {
+                CalendarScreen(doctorName = it)
+            }
         }
         composable("DoctorScreen/{specialization}") { backStackEntry ->
             val specialization = backStackEntry.arguments?.getString("specialization")
             specialization?.let {
-                DoctorScreen(specialization = it)
+                DoctorScreen(specialization = it, navHostController)
             }
         }
     }
