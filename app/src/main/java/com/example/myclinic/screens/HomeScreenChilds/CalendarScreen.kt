@@ -1,7 +1,8 @@
 package com.example.myclinic.screens.HomeScreenChilds
 
 import android.os.Build
-import android.util.Log
+
+import com.google.firebase.auth.FirebaseAuth
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,7 +10,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.MaterialTheme.colors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -41,8 +41,12 @@ fun CalendarScreen(doctorName: String = "") {
     var grayText by remember { mutableStateOf(true) }
     var appointment by remember { mutableStateOf(false) }
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
-
+    var confirmAppointment by remember { mutableStateOf(false )}
+    var selectedTime by remember { mutableStateOf<String?>(null) }
     var selectedDay by remember { mutableStateOf<Int?>(null) }
+    val auth = FirebaseAuth.getInstance()
+    val currentUser = auth.currentUser
+    val patientId = currentUser?.uid
     fun previousMonth() {
         currentMonth = currentMonth.minusMonths(1)
     }
@@ -154,13 +158,10 @@ fun CalendarScreen(doctorName: String = "") {
                                 )
                                 .clickable {
                                     if (doctorName != "") {
-
-                                        Log.d("Box", "button_is_clicked")
                                         selectedDay = day.dayOfMonth
                                         appointment = true
                                         scope.launch {
                                             val doctorId = getDoctorIdByName(doctorName, firestore)
-                                            Log.d("getDoctorID", "$doctorId")
                                             if (doctorId != null) {
                                                 val selectedDate =
                                                     currentMonth.atDay(day.dayOfMonth ?: 1)
@@ -175,17 +176,18 @@ fun CalendarScreen(doctorName: String = "") {
                                                     .collection("DoctorAppointmentCalendar")
                                                     .document(selectedDate.toString())
 
-                                                appointmentDocRef
-                                                    .get()
-                                                    .addOnSuccessListener { document ->
-                                                        if (document.exists()) {
-                                                            val slots =
-                                                                document.data?.mapValues { entry ->
-                                                                    (entry.value as Map<String, Any>)["booked"] as Boolean
-                                                                } ?: emptyMap()
-                                                            timeSlots = slots
-                                                        }
-                                                    }
+                                                val documentSnapshot =
+                                                    appointmentDocRef
+                                                        .get()
+                                                        .await()
+                                                if (documentSnapshot.exists()) {
+
+                                                    val slots =
+                                                        documentSnapshot.data?.mapValues { entry ->
+                                                            (entry.value as Map<String, Any>)["booked"] as Boolean
+                                                        } ?: emptyMap()
+                                                    timeSlots = slots
+                                                }
                                             }
                                         }
                                     }
@@ -229,25 +231,59 @@ fun CalendarScreen(doctorName: String = "") {
                 ) {
                     for (hour in 10..15) {
                         val time = String.format("%02d:00", hour)
+                        val isBooked = timeSlots[time] == true
+                        val isSelected = selectedTime?.let { it == time } == true
+
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .aspectRatio(1f)
-                                .clip(CircleShape),
+                                .clip(CircleShape)
+                                .clickable(enabled = !isBooked) {
+                                    confirmAppointment = true
+                                    selectedTime = if (selectedTime == time) {
+                                        null
+                                    } else {
+                                        time
+                                    }
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = time,
                                 fontSize = 16.sp,
+                                color = when {
+                                    isBooked -> Color.LightGray
+                                    isSelected -> colorResource(id = R.color.authorization_mark)
+                                    else -> Color.Black
+                                }
                             )
+                        }
+                    }
+
+                }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            if (getDoctorIdByName(doctorName, firestore) != null && selectedTime != null && selectedDay != null && patientId != null) {
+                                val selectedDate = selectedDay?.let { currentMonth.atDay(it) }
+                                updateAppointmentSlot(
+                                    doctorId = "${
+                                        getDoctorIdByName(
+                                            doctorName,
+                                            firestore
+                                        )
+                                    }",
+                                    patientId = "$patientId",
+                                    selectedDate = selectedDate,
+                                    selectedTime = "$selectedTime"
+                                )
+                            }
+
 
 
                         }
-                    }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                Button(
-                    onClick = {},
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(start = 100.dp, end = 100.dp),
@@ -259,14 +295,12 @@ fun CalendarScreen(doctorName: String = "") {
                     )
                 ) {
                     Text(
-                        text = "Подтвердить запись",
+                        text = if (confirmAppointment) "Подтвердить запись" else "",
                         color = Color.Black,
                         textAlign = TextAlign.Center
                     )
                 }
-
-            }
-            else if (doctorName != ""){
+            } else if (doctorName != "") {
                 Text(
                     text = "Выберите дату:",
                     fontSize = 18.sp,
@@ -323,14 +357,14 @@ suspend fun createAppointmentDocumentIfNeeded(DoctorID: String, selectedDate: Lo
         .document(DoctorID)
         .collection("DoctorAppointmentCalendar")
         .document(selectedDate.toString())
-    Log.d("suspend", selectedDate.toString())
-    Log.d("suspend", DoctorID)
+
     val documentSnapshot = appointmentDocRef.get().await()
     if (!documentSnapshot.exists()) {
         val timeSlots = generateTimeSlots()
         appointmentDocRef.set(timeSlots)
     }
 }
+
 
 fun generateTimeSlots(): Map<String, Map<String, Any>> {
     val timeSlots = mutableMapOf<String, Map<String, Any>>()
@@ -340,6 +374,7 @@ fun generateTimeSlots(): Map<String, Map<String, Any>> {
     }
     return timeSlots
 }
+
 
 suspend fun getDoctorIdByName(doctorName: String, firestore: FirebaseFirestore): String? {
     return try {
@@ -356,5 +391,25 @@ suspend fun getDoctorIdByName(doctorName: String, firestore: FirebaseFirestore):
     } catch (e: Exception) {
         e.printStackTrace()
         null
+    }
+}
+
+suspend fun updateAppointmentSlot(doctorId: String, selectedDate: LocalDate?, selectedTime: String, patientId: String) {
+    val firestore = Firebase.firestore
+    val appointmentDocRef = firestore.collection("Doctors")
+        .document(doctorId)
+        .collection("DoctorAppointmentCalendar")
+        .document(selectedDate.toString())
+
+    try {
+        appointmentDocRef.update(
+            mapOf(
+                "$selectedTime.booked" to true,
+                "$selectedTime.patientID" to patientId
+            )
+        ).await()
+
+    } catch (e: Exception) {
+        e.printStackTrace()
     }
 }
