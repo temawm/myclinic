@@ -10,4 +10,5 @@
     <color name="authorization_mark">#c8251e</color>
     <color name="authorization_mark_low_opacity">#66C8251E</color>
     <color name="LightLightGray">#929083</color>
+    <color name="authorization_mark_very_low_opacity">#33C8251E</color>
 </resources>

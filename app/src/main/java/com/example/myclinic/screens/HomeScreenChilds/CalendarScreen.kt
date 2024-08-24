@@ -30,8 +30,6 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import org.w3c.dom.Text
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
@@ -39,9 +37,12 @@ import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CalendarScreen(doctorName: String) {
+fun CalendarScreen(doctorName: String = "") {
     var grayText by remember { mutableStateOf(true) }
+    var appointment by remember { mutableStateOf(false) }
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
+
+    var selectedDay by remember { mutableStateOf<Int?>(null) }
     fun previousMonth() {
         currentMonth = currentMonth.minusMonths(1)
     }
@@ -145,38 +146,47 @@ fun CalendarScreen(doctorName: String) {
                                 .aspectRatio(1f)
                                 .clip(CircleShape)
                                 .background(
-                                    if (day.isCurrentDay) colorResource(id = R.color.authorization_mark_low_opacity) else Color.Transparent
+                                    when {
+                                        day.dayOfMonth == selectedDay -> colorResource(id = R.color.authorization_mark_very_low_opacity)
+                                        day.isCurrentDay -> colorResource(id = R.color.authorization_mark_low_opacity)
+                                        else -> Color.Transparent
+                                    }
                                 )
                                 .clickable {
-                                    Log.d("Box","button_is_clicked")
-                                    scope.launch {
-                                        val doctorId = getDoctorIdByName(doctorName, firestore)
-                                        Log.d("getDoctorID", "$doctorId")
-                                        if (doctorId != null) {
-                                            val selectedDate =
-                                                currentMonth.atDay(day.dayOfMonth ?: 1)
-                                            createAppointmentDocumentIfNeeded(
-                                                doctorId,
-                                                selectedDate
-                                            )
+                                    if (doctorName != "") {
 
-                                            val appointmentDocRef = firestore
-                                                .collection("Doctors")
-                                                .document(doctorId)
-                                                .collection("DoctorAppointmentCalendar")
-                                                .document(selectedDate.toString())
+                                        Log.d("Box", "button_is_clicked")
+                                        selectedDay = day.dayOfMonth
+                                        appointment = true
+                                        scope.launch {
+                                            val doctorId = getDoctorIdByName(doctorName, firestore)
+                                            Log.d("getDoctorID", "$doctorId")
+                                            if (doctorId != null) {
+                                                val selectedDate =
+                                                    currentMonth.atDay(day.dayOfMonth ?: 1)
+                                                createAppointmentDocumentIfNeeded(
+                                                    doctorId,
+                                                    selectedDate
+                                                )
 
-                                            appointmentDocRef
-                                                .get()
-                                                .addOnSuccessListener { document ->
-                                                    if (document.exists()) {
-                                                        val slots =
-                                                            document.data?.mapValues { entry ->
-                                                                (entry.value as Map<String, Any>)["booked"] as Boolean
-                                                            } ?: emptyMap()
-                                                        timeSlots = slots
+                                                val appointmentDocRef = firestore
+                                                    .collection("Doctors")
+                                                    .document(doctorId)
+                                                    .collection("DoctorAppointmentCalendar")
+                                                    .document(selectedDate.toString())
+
+                                                appointmentDocRef
+                                                    .get()
+                                                    .addOnSuccessListener { document ->
+                                                        if (document.exists()) {
+                                                            val slots =
+                                                                document.data?.mapValues { entry ->
+                                                                    (entry.value as Map<String, Any>)["booked"] as Boolean
+                                                                } ?: emptyMap()
+                                                            timeSlots = slots
+                                                        }
                                                     }
-                                                }
+                                            }
                                         }
                                     }
                                 },
@@ -191,6 +201,81 @@ fun CalendarScreen(doctorName: String) {
                         }
                     }
                 }
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            if (appointment) {
+                Column(
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .padding(18.dp)
+                        .border(1.dp, Color.LightGray, RoundedCornerShape(10.dp)),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                }
+                Text(
+                    text = "Выберите подходящее время:",
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color.Gray,
+                    modifier = Modifier
+                        .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
+                        .fillMaxWidth()
+                )
+                Row(
+                    modifier = Modifier
+                        .padding(start = 12.dp, end = 12.dp)
+                        .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
+                ) {
+                    for (hour in 10..15) {
+                        val time = String.format("%02d:00", hour)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clip(CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = time,
+                                fontSize = 16.sp,
+                            )
+
+
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 100.dp, end = 100.dp),
+                    shape = RoundedCornerShape(15.dp),
+
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = colorResource(id = R.color.authorization_mark)
+                    )
+                ) {
+                    Text(
+                        text = "Подтвердить запись",
+                        color = Color.Black,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+            }
+            else if (doctorName != ""){
+                Text(
+                    text = "Выберите дату:",
+                    fontSize = 18.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color.Gray,
+                    modifier = Modifier
+                        .padding(12.dp)
+                        .fillMaxWidth()
+                )
             }
         }
     }
@@ -264,10 +349,9 @@ suspend fun getDoctorIdByName(doctorName: String, firestore: FirebaseFirestore):
             .await()
 
         if (!querySnapshot.isEmpty) {
-            // Предположим, что имя уникально, поэтому берем первый найденный документ
             querySnapshot.documents.first().id
         } else {
-            null // Врач с таким именем не найден
+            null
         }
     } catch (e: Exception) {
         e.printStackTrace()

@@ -182,7 +182,9 @@ fun DoctorScreen(specialization: String, navHostController: NavHostController) {
                                 RoundedCornerShape(25.dp)
                             ),
                         onClick = {
-                            navHostController.navigate("CalendarScreen/${doctor.Имя}")
+                            navHostController.navigate("CalendarScreen/${doctor.Имя}"){
+                                launchSingleTop = true
+                            }
 
                         },
                         shape = RoundedCornerShape(15.dp),

@@ -1,4 +1,5 @@
 package com.example.myclinic.screens.HomeScreenChilds
+
 import android.annotation.SuppressLint
 import android.os.Build
 import android.util.Log
@@ -19,6 +20,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.myclinic.R
 import org.w3c.dom.Text
+
 @RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
@@ -28,12 +30,13 @@ fun HomeScreen() {
         bottomBar = {
             BottomNavigation(navControllerForHomeScreen)
         }
-    ){
+    ) {
         NavGraphForHomeScreen(navHostController = navControllerForHomeScreen)
     }
 }
+
 @Composable
-fun BottomNavigation(navController: NavController){
+fun BottomNavigation(navController: NavController) {
     val listBottomNavigationItems = listOf(
         BottomHomeScreenNavigation.CatalogScreen,
         BottomHomeScreenNavigation.CalendarScreen,
@@ -45,28 +48,34 @@ fun BottomNavigation(navController: NavController){
         val backStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = backStackEntry?.destination?.route
 
-        listBottomNavigationItems.forEach{item->
+        listBottomNavigationItems.forEach { item ->
             BottomNavigationItem(
                 selected = currentRoute == item.route,
                 onClick = {
-                    Log.d("HomeScreen.kt","navController started")
-                   navController.navigate(item.route){
-                       launchSingleTop = true
-                   }
-                },
-                icon = {
-                    Icon(painter = painterResource(id = item.iconId ), contentDescription = "Icon")
-                },
-                label = {
-                    Text(text = item.title,
-                        color = colorResource(id = R.color.authorization_mark),
-                        fontSize = 9.sp
-                    )
-                },
-                selectedContentColor = colorResource(id = R.color.authorization_mark),
-                unselectedContentColor = Color.Gray
+                    Log.d("HomeScreen.kt", "navController started")
+                    val route = if (item.route == BottomHomeScreenNavigation.CalendarScreen.route) {
+                        "CalendarScreen/${""}"
+                    } else {
+                        item.route
+                    }
+                    navController.navigate(route) {
+                        launchSingleTop = true
+                    }
+        },
+        icon = {
+            Icon(painter = painterResource(id = item.iconId), contentDescription = "Icon")
+        },
+        label = {
+            Text(
+                text = item.title,
+                color = colorResource(id = R.color.authorization_mark),
+                fontSize = 9.sp
             )
-        }
-
+        },
+        selectedContentColor = colorResource(id = R.color.authorization_mark),
+        unselectedContentColor = Color.Gray
+        )
     }
+
+}
 }
