@@ -113,7 +113,7 @@ fun CatalogScreen(navHostController: NavHostController) {
                     colorResource(R.color.authorization_mark),
                     RoundedCornerShape(15.dp)
                 ),
-            placeholder = { Text(text = "Поиск...", color = Color.Gray) },
+            placeholder = { Text(text = "Гинеколог", color = Color.Gray) },
             colors = TextFieldDefaults.textFieldColors(
                 containerColor = Color.White,
                 cursorColor = colorResource(id = R.color.authorization_mark),

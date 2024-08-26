@@ -1,6 +1,7 @@
 package com.example.myclinic.screens.HomeScreenChilds
 
 import android.os.Build
+import android.util.Log
 
 import com.google.firebase.auth.FirebaseAuth
 import androidx.annotation.RequiresApi
@@ -12,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -22,9 +24,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.example.myclinic.R
+import com.google.android.play.integrity.internal.f
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -37,282 +43,382 @@ import java.util.*
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CalendarScreen(doctorName: String = "") {
+fun CalendarScreen(doctorName: String = "", navController: NavHostController) {
     var grayText by remember { mutableStateOf(true) }
+    val today = LocalDate.now()
+    var isLoadingTimesZone by remember { mutableStateOf(false)  }
+    var isUnSuccessSending by remember { mutableStateOf( false)  }
     var appointment by remember { mutableStateOf(false) }
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
-    var confirmAppointment by remember { mutableStateOf(false )}
+    var confirmAppointment by remember { mutableStateOf(false) }
     var selectedTime by remember { mutableStateOf<String?>(null) }
     var selectedDay by remember { mutableStateOf<Int?>(null) }
+    var successfulAppointment by remember { mutableStateOf(false) }
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser
     val patientId = currentUser?.uid
-    fun previousMonth() {
-        currentMonth = currentMonth.minusMonths(1)
-    }
 
-    fun nextMonth() {
-        currentMonth = currentMonth.plusMonths(1)
-    }
+
 
     val daysInMonth = generateDaysInMonthWithPadding(currentMonth)
     val firestore = Firebase.firestore
     var timeSlots by remember { mutableStateOf(emptyMap<String, Boolean>()) }
     val scope = rememberCoroutineScope()
-    Column(
-        modifier = Modifier
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-
-        Row(
+    if (!successfulAppointment && !isUnSuccessSending) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 25.dp, end = 25.dp, bottom = 20.dp, top = 40.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
         ) {
-            Icon(
 
-                painter = painterResource(id = R.drawable.arrowleft),
-                contentDescription = "Arrow_left",
-                tint = Color.Black,
+            Row(
                 modifier = Modifier
-                    .size(40.dp)
-                    .border(
-                        1.dp,
-                        colorResource(id = R.color.authorization_mark),
-                        RoundedCornerShape(13.dp)
-                    )
-                    .clickable { previousMonth() }
-            )
-            Column(
-                modifier = Modifier
-                    .wrapContentSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    .fillMaxWidth()
+                    .padding(start = 25.dp, end = 25.dp, bottom = 20.dp, top = 40.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault()),
-                    fontSize = 24.sp,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(modifier = Modifier.height(5.dp))
-                Text(
-                    text = currentMonth.year.toString(),
-                    fontSize = 16.sp,
-                    textAlign = TextAlign.Center,
-                    color = Color.Gray
-                )
-            }
-            Icon(
-                painter = painterResource(id = R.drawable.arrowright),
-                contentDescription = "Arrow_right",
-                tint = Color.Black,
-                modifier = Modifier
-                    .size(40.dp)
-                    .border(
-                        1.dp,
-                        colorResource(id = R.color.authorization_mark),
-                        RoundedCornerShape(13.dp)
-                    )
-                    .clickable { nextMonth() }
-            )
+                Icon(
 
-        }
-        Spacer(modifier = Modifier.height(20.dp))
-        val daysOfWeek = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
-        Row(modifier = Modifier.fillMaxWidth()) {
-            daysOfWeek.forEach { day ->
-                Text(
-                    text = day,
-                    fontSize = 16.sp,
+                    painter = painterResource(id = R.drawable.arrowleft),
+                    contentDescription = "Arrow_left",
+                    tint = Color.Black,
                     modifier = Modifier
-                        .weight(1f),
-                    textAlign = TextAlign.Center,
-                    color = Color.LightGray,
+                        .size(40.dp)
+                        .border(
+                            1.dp,
+                            colorResource(id = R.color.authorization_mark),
+                            RoundedCornerShape(13.dp)
+                        )
+                        .clickable {
+                            Log.d("CalendarScreen", "Current month before: $currentMonth")
+                            currentMonth = currentMonth.minusMonths(1)
+                            Log.d("CalendarScreen", "Current month after: $currentMonth")
+                        }
                 )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-        Column {
-            for (week in daysInMonth.chunked(7)) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    week.forEach { day ->
-                        if ((day.dayOfMonth?.toString() ?: "") == "1") {
-                            grayText = !grayText
-                        }
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .clip(CircleShape)
-                                .background(
-                                    when {
-                                        day.dayOfMonth == selectedDay -> colorResource(id = R.color.authorization_mark_very_low_opacity)
-                                        day.isCurrentDay -> colorResource(id = R.color.authorization_mark_low_opacity)
-                                        else -> Color.Transparent
-                                    }
-                                )
-                                .clickable {
-                                    if (doctorName != "") {
-                                        selectedDay = day.dayOfMonth
-                                        appointment = true
-                                        scope.launch {
-                                            val doctorId = getDoctorIdByName(doctorName, firestore)
-                                            if (doctorId != null) {
-                                                val selectedDate =
-                                                    currentMonth.atDay(day.dayOfMonth ?: 1)
-                                                createAppointmentDocumentIfNeeded(
-                                                    doctorId,
-                                                    selectedDate
-                                                )
-
-                                                val appointmentDocRef = firestore
-                                                    .collection("Doctors")
-                                                    .document(doctorId)
-                                                    .collection("DoctorAppointmentCalendar")
-                                                    .document(selectedDate.toString())
-
-                                                val documentSnapshot =
-                                                    appointmentDocRef
-                                                        .get()
-                                                        .await()
-                                                if (documentSnapshot.exists()) {
-
-                                                    val slots =
-                                                        documentSnapshot.data?.mapValues { entry ->
-                                                            (entry.value as Map<String, Any>)["booked"] as Boolean
-                                                        } ?: emptyMap()
-                                                    timeSlots = slots
-                                                }
-                                            }
-                                        }
-                                    }
-                                },
-
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = day.dayOfMonth?.toString() ?: "",
-                                fontSize = 16.sp,
-                                color = if (grayText) Color.LightGray else Color.Black
-                            )
-                        }
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(20.dp))
-            if (appointment) {
                 Column(
                     modifier = Modifier
-                        .wrapContentSize()
-                        .padding(18.dp)
-                        .border(1.dp, Color.LightGray, RoundedCornerShape(10.dp)),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .wrapContentSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
+                    Text(
+                        text = currentMonth.month.getDisplayName(
+                            TextStyle.FULL,
+                            Locale.getDefault()
+                        ),
+                        fontSize = 24.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(modifier = Modifier.height(5.dp))
+                    Text(
+                        text = currentMonth.year.toString(),
+                        fontSize = 16.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color.Gray
+                    )
                 }
-                Text(
-                    text = "Выберите подходящее время:",
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center,
-                    color = Color.Gray,
+                Icon(
+                    painter = painterResource(id = R.drawable.arrowright),
+                    contentDescription = "Arrow_right",
+                    tint = Color.Black,
                     modifier = Modifier
-                        .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
-                        .fillMaxWidth()
+                        .size(40.dp)
+                        .border(
+                            1.dp,
+                            colorResource(id = R.color.authorization_mark),
+                            RoundedCornerShape(13.dp)
+                        )
+                        .clickable {
+                            Log.d("CalendarScreen", "Current month before: $currentMonth")
+                            currentMonth = currentMonth.plusMonths(1)
+                            Log.d("CalendarScreen", "Current month after: $currentMonth") }
                 )
-                Row(
-                    modifier = Modifier
-                        .padding(start = 12.dp, end = 12.dp)
-                        .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
-                ) {
-                    for (hour in 10..15) {
-                        val time = String.format("%02d:00", hour)
-                        val isBooked = timeSlots[time] == true
-                        val isSelected = selectedTime?.let { it == time } == true
 
-                        Box(
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            val daysOfWeek = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс")
+            Row(modifier = Modifier.fillMaxWidth()) {
+                daysOfWeek.forEach { day ->
+                    Text(
+                        text = day,
+                        fontSize = 16.sp,
+                        modifier = Modifier
+                            .weight(1f),
+                        textAlign = TextAlign.Center,
+                        color = Color.LightGray,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Column {
+                for (week in daysInMonth.chunked(7)) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        week.forEach { day ->
+                            if ((day.dayOfMonth?.toString() ?: "") == "1") {
+                                grayText = !grayText
+                            }
+                            val currentDate = day.dayOfMonth?.let { currentMonth.atDay(it) }
+                            val isBeforeToday = currentDate?.isBefore(today) ?: false
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(CircleShape)
+                                    .background(
+                                        when {
+                                            day.dayOfMonth == selectedDay -> colorResource(id = R.color.authorization_mark_very_low_opacity)
+                                            day.isCurrentDay -> colorResource(id = R.color.authorization_mark_low_opacity)
+                                            else -> Color.Transparent
+                                        }
+                                    )
+                                    .clickable(
+                                        enabled = !isBeforeToday
+                                    )
+                                    {
+                                        if (doctorName != "" && !isBeforeToday) {
+                                            selectedDay = day.dayOfMonth
+                                            appointment = true
+                                            scope.launch {
+                                                isLoadingTimesZone = true
+                                                val doctorId =
+                                                    getDoctorIdByName(doctorName, firestore)
+                                                if (doctorId != null) {
+                                                    val selectedDate =
+                                                        currentMonth.atDay(day.dayOfMonth ?: 1)
+                                                    createAppointmentDocumentIfNeeded(
+                                                        doctorId,
+                                                        selectedDate
+                                                    )
+
+                                                    val appointmentDocRef = firestore
+                                                        .collection("Doctors")
+                                                        .document(doctorId)
+                                                        .collection("DoctorAppointmentCalendar")
+                                                        .document(selectedDate.toString())
+
+                                                    val documentSnapshot =
+                                                        appointmentDocRef
+                                                            .get()
+                                                            .await()
+                                                    if (documentSnapshot.exists()) {
+
+                                                        val slots =
+                                                            documentSnapshot.data?.mapValues { entry ->
+                                                                (entry.value as Map<String, Any>)["booked"] as Boolean
+                                                            } ?: emptyMap()
+                                                        timeSlots = slots
+                                                    }
+                                                    isLoadingTimesZone = false
+                                                }
+                                            }
+
+                                        }
+                                    },
+
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = day.dayOfMonth?.toString() ?: "",
+                                    fontSize = 16.sp,
+                                    color = if (grayText) Color.LightGray else Color.Black
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(60.dp))
+                if (appointment) {
+                    if (!isLoadingTimesZone) {
+                        Text(
+                            text = "Выберите подходящее время:",
+                            fontSize = 18.sp,
+                            textAlign = TextAlign.Center,
+                            color = Color.Gray,
                             modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f)
-                                .clip(CircleShape)
-                                .clickable(enabled = !isBooked) {
-                                    confirmAppointment = true
-                                    selectedTime = if (selectedTime == time) {
-                                        null
-                                    } else {
-                                        time
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
+                                .padding(start = 12.dp, end = 12.dp, bottom = 24.dp)
+                                .fillMaxWidth()
+                        )
+                        Row(
+                            modifier = Modifier
+                                .padding(start = 12.dp, end = 12.dp)
+                                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
                         ) {
-                            Text(
-                                text = time,
-                                fontSize = 16.sp,
-                                color = when {
-                                    isBooked -> Color.LightGray
-                                    isSelected -> colorResource(id = R.color.authorization_mark)
-                                    else -> Color.Black
+                            for (hour in 10..15) {
+                                val time = String.format("%02d:00", hour)
+                                val isBooked = timeSlots[time] == true
+                                val isSelected = selectedTime?.let { it == time } == true
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f)
+                                        .clip(CircleShape)
+                                        .clickable(enabled = !isBooked) {
+                                            confirmAppointment = true
+                                            selectedTime = if (selectedTime == time) {
+                                                null
+                                            } else {
+                                                time
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = time,
+                                        fontSize = 16.sp,
+                                        color = when {
+                                            isBooked -> Color.LightGray
+                                            isSelected -> colorResource(id = R.color.authorization_mark)
+                                            else -> Color.Black
+                                        }
+                                    )
                                 }
+                            }
+
+                        }
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    isUnSuccessSending = true
+                                    if (getDoctorIdByName(
+                                            doctorName,
+                                            firestore
+                                        ) != null && selectedTime != null && selectedDay != null && patientId != null
+                                    ) {
+                                        val selectedDate =
+                                            selectedDay?.let { currentMonth.atDay(it) }
+                                        try {
+                                            updateAppointmentSlot(
+                                                doctorId = "${
+                                                    getDoctorIdByName(
+                                                        doctorName,
+                                                        firestore
+                                                    )
+                                                }",
+                                                patientId = "$patientId",
+                                                selectedDate = selectedDate,
+                                                selectedTime = "$selectedTime"
+                                            )
+                                            isUnSuccessSending = false
+                                            successfulAppointment = true
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 100.dp, end = 100.dp),
+                            shape = RoundedCornerShape(15.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White,
+                                contentColor = colorResource(id = R.color.authorization_mark)
+                            )
+                        ) {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                text = if (confirmAppointment) "Подтвердить запись" else "",
+                                color = Color.Black,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
-
-                }
-                Button(
-                    onClick = {
-                        scope.launch {
-                            if (getDoctorIdByName(doctorName, firestore) != null && selectedTime != null && selectedDay != null && patientId != null) {
-                                val selectedDate = selectedDay?.let { currentMonth.atDay(it) }
-                                updateAppointmentSlot(
-                                    doctorId = "${
-                                        getDoctorIdByName(
-                                            doctorName,
-                                            firestore
-                                        )
-                                    }",
-                                    patientId = "$patientId",
-                                    selectedDate = selectedDate,
-                                    selectedTime = "$selectedTime"
-                                )
-                            }
-
-
-
+                    else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(64.dp),
+                                color = colorResource(id = R.color.authorization_mark)
+                            )
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 100.dp, end = 100.dp),
-                    shape = RoundedCornerShape(15.dp),
 
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = colorResource(id = R.color.authorization_mark)
-                    )
-                ) {
+                    }
+                } else if (doctorName != "") {
                     Text(
-                        text = if (confirmAppointment) "Подтвердить запись" else "",
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
+                        text = "Выберите дату:",
+                        fontSize = 18.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color.Gray,
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .fillMaxWidth()
                     )
                 }
-            } else if (doctorName != "") {
-                Text(
-                    text = "Выберите дату:",
-                    fontSize = 18.sp,
-                    textAlign = TextAlign.Center,
-                    color = Color.Gray,
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .fillMaxWidth()
-                )
             }
         }
+    } else if (isUnSuccessSending && !successfulAppointment){
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Загрузка...",
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .wrapContentWidth(),
+                textAlign = TextAlign.Center,
+                color = Color.Gray,
+                fontSize = 24.sp
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(64.dp),
+                color = colorResource(id = R.color.authorization_mark)
+            )
+        }
     }
+    else {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            Spacer(modifier = Modifier.fillMaxHeight(0.4f))
+            Text(
+                text = "Запись сохранена за вами!",
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .wrapContentWidth(),
+                textAlign = TextAlign.Center,
+                color = Color.Black,
+                fontSize = 24.sp
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Icon(
+                painter = painterResource(id = R.drawable.check),
+                contentDescription = "Check",
+                modifier = Modifier.size(64.dp),
+                tint = colorResource(id = R.color.authorization_mark)
+            )
+            Spacer(modifier = Modifier.fillMaxHeight(0.4f))
+            Text(
+                text = "Обратно в каталог",
+                fontSize = 18.sp,
+                textDecoration = TextDecoration.Underline,
+                textAlign = TextAlign.Center,
+                color = Color.Gray,
+                modifier = Modifier
+                    .padding(12.dp)
+                    .fillMaxWidth()
+                    .clickable { navController.navigate("CatalogScreen") }
+            )
+        }
+    }
+
 }
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -394,7 +500,12 @@ suspend fun getDoctorIdByName(doctorName: String, firestore: FirebaseFirestore):
     }
 }
 
-suspend fun updateAppointmentSlot(doctorId: String, selectedDate: LocalDate?, selectedTime: String, patientId: String) {
+suspend fun updateAppointmentSlot(
+    doctorId: String,
+    selectedDate: LocalDate?,
+    selectedTime: String,
+    patientId: String,
+) {
     val firestore = Firebase.firestore
     val appointmentDocRef = firestore.collection("Doctors")
         .document(doctorId)
@@ -411,5 +522,7 @@ suspend fun updateAppointmentSlot(doctorId: String, selectedDate: LocalDate?, se
 
     } catch (e: Exception) {
         e.printStackTrace()
+        throw e
     }
+
 }
