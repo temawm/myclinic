@@ -57,9 +57,6 @@ fun CalendarScreen(doctorName: String = "", navController: NavHostController) {
     val auth = FirebaseAuth.getInstance()
     val currentUser = auth.currentUser
     val patientId = currentUser?.uid
-
-
-
     val daysInMonth = generateDaysInMonthWithPadding(currentMonth)
     val firestore = Firebase.firestore
     var timeSlots by remember { mutableStateOf(emptyMap<String, Boolean>()) }
@@ -160,7 +157,12 @@ fun CalendarScreen(doctorName: String = "", navController: NavHostController) {
                             if ((day.dayOfMonth?.toString() ?: "") == "1") {
                                 grayText = !grayText
                             }
-                            val currentDate = day.dayOfMonth?.let { currentMonth.atDay(it) }
+                            val validDay = if (day.dayOfMonth != null && day.dayOfMonth > currentMonth.lengthOfMonth()) {
+                                currentMonth.lengthOfMonth()
+                            } else {
+                                day.dayOfMonth
+                            }
+                            val currentDate = validDay?.let { currentMonth.atDay(it) }
                             val isBeforeToday = currentDate?.isBefore(today) ?: false
                             Box(
                                 modifier = Modifier

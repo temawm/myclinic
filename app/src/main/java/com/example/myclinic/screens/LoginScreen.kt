@@ -2,13 +2,11 @@ package com.example.myclinic.screens
 
 import android.content.Context
 import android.net.Uri
-import com.example.myclinic.screens.HomeScreenChilds.HomeScreen
 import androidx.compose.ui.platform.LocalContext
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.util.Log
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -28,6 +26,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
+import androidx.compose.material.MaterialTheme.colors
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,10 +61,13 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavController) {
+    val scope = rememberCoroutineScope()
     var isLoadingContext by remember { mutableStateOf(false) }
     val auth = Firebase.auth
     val context = LocalContext.current
@@ -77,7 +80,7 @@ fun LoginScreen(navController: NavController) {
     var connectionInternet by remember { mutableStateOf(true) }
     var enabledContinueButton by remember { mutableStateOf(true) }
     var timer by remember { mutableIntStateOf(0) }
-    var failedSignIn by remember { mutableStateOf(false) }
+    var failedSignUp by remember { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(connectionInternet) {
         if (!connectionInternet) {
             for (i in 5 downTo 0) {
@@ -99,21 +102,16 @@ fun LoginScreen(navController: NavController) {
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.mark),
-                contentDescription = "authorization_logo",
-                modifier = Modifier
-                    .size(128.dp)
-                    .clip(RoundedCornerShape(16.dp))
-            )
             Text(
-                text = "Iclinic",
+                text = if (signInorUp) "Авторизация" else "Регистрация",
                 modifier = Modifier
                     .wrapContentWidth()
-                    .wrapContentHeight(),
-                fontSize = 64.sp,
-                color = colorResource(id = R.color.authorization_mark)
+                    .wrapContentHeight()
+                    .padding(top = 20.dp),
+                fontSize = 38.sp,
+                color = Color.Black
             )
+
             Spacer(modifier = Modifier.height(32.dp))
             TextField(
                 value = email,
@@ -176,18 +174,19 @@ fun LoginScreen(navController: NavController) {
 
             )
             Text(
-                text = "Забыли пароль?",
+                text = if (signInorUp) "Забыли пароль?" else if (failedSignUp == true && !signInorUp) "Несуществующий email-адрес" else if (failedSignUp == false && !signInorUp) "На вашу почту отправлено письмо с подтверждением" else "Уже есть аккаунт?",
                 modifier = Modifier
                     .wrapContentHeight()
                     .wrapContentWidth()
                     .padding(12.dp)
                     .clickable {
-                        showPopup = true
+                        if (signInorUp) showPopup = true else signInorUp = true
                     },
-                color = colorResource(id = R.color.authorization_mark),
+                textAlign = TextAlign.Center,
+                color = if (failedSignUp == false && !signInorUp) Color.Black else colorResource(id = R.color.authorization_mark),
                 style = TextStyle(
                     fontSize = 16.sp,
-                    textDecoration = TextDecoration.Underline
+                    textDecoration = if (failedSignUp == false && !signInorUp) null else TextDecoration.Underline
                 )
 
 
@@ -204,6 +203,7 @@ fun LoginScreen(navController: NavController) {
                 Button(
                     onClick = {
                         signInorUp = true
+                        failedSignUp = null
                     },
                     modifier = Modifier
                         .width(175.dp)
@@ -226,6 +226,7 @@ fun LoginScreen(navController: NavController) {
                 Button(
                     onClick = {
                         signInorUp = false
+                        failedSignUp = null
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -257,8 +258,11 @@ fun LoginScreen(navController: NavController) {
                                 connectionInternet = true
                                 enabledContinueButton = true
                                 if (!signInorUp) {
-                                    signUp(auth, email, password)
+                                    scope.launch {
+                                        val signUpResult = signUpAndVerifyEmail(auth,email,password)
+                                        failedSignUp = !signUpResult
                                         isLoadingContext = false
+                                    }
 
                                 } else {
                                     signIn(auth, email, password, navController)
@@ -302,6 +306,11 @@ fun LoginScreen(navController: NavController) {
                     textAlign = TextAlign.Center
                 )
             }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ){
             Text(
                 text = "Privacy policy",
                 fontSize = 16.sp,
@@ -315,9 +324,9 @@ fun LoginScreen(navController: NavController) {
                 style = TextStyle(
                     textDecoration = TextDecoration.Underline,
                 ),
-                color = Color.LightGray
+                color = Color.LightGray)
+            }
 
-            )
             if (showPopup) {
                 Popup(
                     alignment = Alignment.Center,
@@ -385,15 +394,15 @@ fun LoginScreen(navController: NavController) {
 
 }
 
-private fun signUp(auth: FirebaseAuth, email: String, password: String) {
-    auth.createUserWithEmailAndPassword(email, password)
-        .addOnCompleteListener {
-            if (it.isSuccessful) {
-                Log.d("MyAuthLog", "SignUp is successful!")
-            } else {
-                Log.d("MyAuthLog", "SignUp is failure!")
-            }
-        }
+suspend fun signUpAndVerifyEmail(auth: FirebaseAuth, email: String, password: String): Boolean {
+    return try {
+        auth.createUserWithEmailAndPassword(email, password).await()
+        auth.currentUser?.sendEmailVerification()?.await()
+        true
+    } catch (e: Exception) {
+        Log.d("MyAuthLog", "SignUp failed: ${e.message}")
+        false
+    }
 }
 
 private fun signIn(
