@@ -59,6 +59,8 @@ import androidx.navigation.NavController
 import com.example.myclinic.R
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -67,6 +69,7 @@ import kotlinx.coroutines.tasks.await
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(navController: NavController) {
+    val firestore = Firebase.firestore
     val scope = rememberCoroutineScope()
     var isLoadingContext by remember { mutableStateOf(false) }
     val auth = Firebase.auth
@@ -183,7 +186,7 @@ fun LoginScreen(navController: NavController) {
                         if (signInorUp) showPopup = true else signInorUp = true
                     },
                 textAlign = TextAlign.Center,
-                color = if (failedSignUp == false && !signInorUp) Color.Black else colorResource(id = R.color.authorization_mark),
+                color = if (failedSignUp == false && !signInorUp) Color.Gray else colorResource(id = R.color.authorization_mark),
                 style = TextStyle(
                     fontSize = 16.sp,
                     textDecoration = if (failedSignUp == false && !signInorUp) null else TextDecoration.Underline
@@ -261,6 +264,9 @@ fun LoginScreen(navController: NavController) {
                                     scope.launch {
                                         val signUpResult = signUpAndVerifyEmail(auth,email,password)
                                         failedSignUp = !signUpResult
+                                        if (signUpResult) {
+                                            createDatabase(firestore, email)
+                                        }
                                         isLoadingContext = false
                                     }
 
@@ -393,7 +399,29 @@ fun LoginScreen(navController: NavController) {
     }
 
 }
+fun createDatabase (firestore: FirebaseFirestore, email: String): Boolean {
+    return try {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val userRef = firestore.collection("Patients").document(userId!!)
 
+        userRef.get().addOnSuccessListener { document ->
+            if (!document.exists()) {
+                val userProfile = hashMapOf(
+                    "name" to "",
+                    "birthDate" to "",
+                    "email" to email,
+                    "profileImageUrl" to ""
+                )
+                userRef.set(userProfile)
+            }
+        }
+        true
+    }
+    catch (e:Exception) {
+        Log.d("CreateDatabase","$e")
+        false
+    }
+}
 suspend fun signUpAndVerifyEmail(auth: FirebaseAuth, email: String, password: String): Boolean {
     return try {
         auth.createUserWithEmailAndPassword(email, password).await()

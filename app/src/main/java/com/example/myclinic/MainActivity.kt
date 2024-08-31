@@ -9,6 +9,7 @@ import androidx.annotation.RequiresApi
 import com.example.myclinic.navigation.AppNavGraph
 import com.example.myclinic.screens.HomeScreenChilds.DoctorScreen
 import com.example.myclinic.screens.HomeScreenChilds.HomeScreen
+import com.example.myclinic.screens.HomeScreenChilds.ProfileScreen
 import com.example.myclinic.screens.LoginScreen
 import com.google.firebase.FirebaseApp
 
@@ -18,7 +19,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AppNavGraph()
+            ProfileScreen()
         }
     }
 }
