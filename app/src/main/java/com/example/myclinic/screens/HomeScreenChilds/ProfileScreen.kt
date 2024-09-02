@@ -1,9 +1,11 @@
 package com.example.myclinic.screens.HomeScreenChilds
 
+import android.net.Uri
 import android.util.Log
-import android.widget.Space
+import coil.compose.rememberImagePainter
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,7 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.motionEventSpy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -56,6 +59,8 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -74,10 +79,11 @@ data class Appointment(
 @Composable
 
 fun ProfileScreen() {
+
     var patientName by remember { mutableStateOf<String?>(null) }
     var patientEmail by remember { mutableStateOf<String?>(null) }
     var patientDate by remember { mutableStateOf<String?>(null) }
-    var patientProfileImageUrl by remember { mutableStateOf<String?>(null) }
+    var patientProfileImageUrl by remember { mutableStateOf<Uri?>(null) }
     var changeFields by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     var appointments by remember { mutableStateOf<List<Appointment>>(emptyList()) }
@@ -85,16 +91,20 @@ fun ProfileScreen() {
     val userId = FirebaseAuth.getInstance().currentUser?.uid
     val userRef = firestore.collection("Patients").document(userId!!)
     var isLoadCards by remember { mutableStateOf(true) }
+
+
     LaunchedEffect(Unit) {
         userRef.get().addOnSuccessListener { document ->
             if (document.exists()) {
                 patientName = document.getString("name")
                 patientDate = document.getString("birthDate")
                 patientEmail = document.getString("email")
-                patientProfileImageUrl = document.getString("profileImageUrl")
+                val profileImageUrl = document.getString("profileImageUrl")
+                Log.d("ProfileScreen", "profileImageUrl from Firestore: $profileImageUrl")
+                patientProfileImageUrl = profileImageUrl?.let { Uri.parse(it) }
                 Log.d(
                     "ProfileScreen",
-                    "User data loaded successfully: $patientName, $patientDate, $patientEmail"
+                    "User data loaded successfully: $patientName, $patientDate, $patientEmail, $patientProfileImageUrl"
                 )
 
             } else {
@@ -155,28 +165,37 @@ fun ProfileScreen() {
                 textAlign = TextAlign.Center
             )
             Icon(
-                    painter = painterResource(id = R.drawable.settings),
-            contentDescription = "Settings Icon",
-            tint = colorResource(id = R.color.authorization_mark),
-            modifier = Modifier.size(32.dp)
+                painter = painterResource(id = R.drawable.settings),
+                contentDescription = "Settings Icon",
+                tint = colorResource(id = R.color.authorization_mark),
+                modifier = Modifier.size(32.dp)
             )
         }
-
+        Spacer(modifier = Modifier.height(12.dp))
         Spacer(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(1.dp)
                 .background(colorResource(id = R.color.LightLightGray))
         )
-
-        Image(
-            painter = painterResource(id = R.drawable.mark),
-            contentDescription = "PatientPhoto",
-            modifier = Modifier
-                .size(128.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .padding(top = 16.dp)
+        Spacer(modifier = Modifier.height(30.dp))
+        SelectImageFromGallery(
+            selectedImageUri = patientProfileImageUrl,
+            onImageSelected = { uri ->
+                patientProfileImageUrl = uri
+                Log.d("SelectImageFromGallery Call", "Uri is null: uri = $uri")
+                patientProfileImageUrl?.let {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        if (uploadImageToFirebaseStorage(it, userRef)) {
+                            Log.d("uploadImageToFirebaseStorage", "Succesful")
+                        } else {
+                            Log.d("uploadImageToFirebaseStorage", "Failure")
+                        }
+                    }
+                }
+            }
         )
+
 
         Spacer(modifier = Modifier.height(16.dp))
         TextField(
@@ -361,7 +380,6 @@ fun ProfileScreen() {
             }
         }
 
-
     }
 }
 
@@ -521,7 +539,7 @@ fun AppointmentCard(appointment: Appointment) {
     ) {
         when (deletionState) {
             DeletionState.Idle -> {
-                Row (modifier = Modifier.fillMaxSize()){
+                Row(modifier = Modifier.fillMaxSize()) {
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(
                         modifier = Modifier
@@ -647,5 +665,90 @@ fun AppointmentCard(appointment: Appointment) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SelectImageFromGallery(onImageSelected: (Uri?) -> Unit, selectedImageUri: Uri?) {
+    Log.d("SelectImageFromGallery", "Started, uri = $selectedImageUri")
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            onImageSelected(uri)
+        })
+    Box(
+        modifier = Modifier
+            .size(196.dp)
+            .clip(CircleShape)
+            .padding(top = 16.dp)
+            .clickable {
+                launcher.launch("image/")
+            }
+    ) {
+        if (selectedImageUri != null){
+        Image(
+            painter = rememberImagePainter(
+                data = selectedImageUri,
+            ),
+            contentDescription = "PatientPhoto",
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = 1.3f,
+                    scaleY = 1.3f
+                )
+                .align(Alignment.Center),
+            contentScale = ContentScale.Crop
+        )
+    }
+        else {
+            Text(
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Gray),
+                text = "Нажмите чтобы загрузить",
+                color = colorResource(id = R.color.LightLightGray)
+                )
+        }
+        }
+    Log.d("SelectImageFromGallery", "Finished")
+
+}
+
+suspend fun uploadImageToFirebaseStorage(
+    uri: Uri?,
+    userRef: DocumentReference
+): Boolean {
+    return try {
+        if (uri != null) {
+            val storageRef = Firebase.storage.reference
+            val imageRef = storageRef.child("images/${uri.lastPathSegment}")
+            imageRef.putFile(uri).await()
+            val downloadUrl = getDownloadUrlForImage("images/${uri.lastPathSegment}")
+            if (downloadUrl != null) {
+                userRef.update("profileImageUrl", downloadUrl).await()
+                Log.d("FirebaseStorage", "Image URL updated successfully: $downloadUrl")
+            }
+            true
+        } else {
+            false
+        }
+    } catch (e: Exception) {
+        Log.e("FirebaseUpload", "Upload failed", e)
+        false
+    }
+}
+suspend fun getDownloadUrlForImage(imagePath: String): String? {
+    val storage = FirebaseStorage.getInstance()
+    val storageRef = storage.reference
+    val imageRef = storageRef.child(imagePath)
+
+    return try {
+        val downloadUrl = imageRef.downloadUrl.await()
+        downloadUrl.toString()
+    } catch (e: Exception) {
+        Log.e("FirebaseStorage", "Failed to get download URL", e)
+        null
     }
 }
