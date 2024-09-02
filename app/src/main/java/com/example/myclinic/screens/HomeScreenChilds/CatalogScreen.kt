@@ -85,7 +85,7 @@ fun CatalogScreen(navHostController: NavHostController) {
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
-            .padding(top = 30.dp),
+            .padding(top = 30.dp, bottom = 60.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
