@@ -25,7 +25,7 @@ import org.w3c.dom.Text
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun HomeScreen() {
-    var navControllerForHomeScreen = rememberNavController()
+    val navControllerForHomeScreen = rememberNavController()
     Scaffold(
         bottomBar = {
             BottomNavigation(navControllerForHomeScreen)

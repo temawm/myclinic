@@ -208,9 +208,10 @@ fun ProfileScreen() {
                 .fillMaxWidth()
                 .padding(start = 12.dp, end = 12.dp, top = 12.dp),
             placeholder = { Text(text = patientName!!, color = Color.Black) },
-            colors = TextFieldDefaults.textFieldColors
+            colors = TextFieldDefaults.colors
                 (
-                containerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Gray
             )
         )
@@ -224,9 +225,10 @@ fun ProfileScreen() {
                 .fillMaxWidth()
                 .padding(start = 12.dp, end = 12.dp, top = 12.dp),
             placeholder = { Text(text = patientEmail!!, color = Color.Black) },
-            colors = TextFieldDefaults.textFieldColors
+            colors = TextFieldDefaults.colors
                 (
-                containerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Gray
             )
         )
@@ -240,9 +242,10 @@ fun ProfileScreen() {
                 .fillMaxWidth()
                 .padding(start = 12.dp, end = 12.dp, top = 12.dp),
             placeholder = { Text(text = patientDate!!, color = Color.Black) },
-            colors = TextFieldDefaults.textFieldColors
+            colors = TextFieldDefaults.colors
                 (
-                containerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent,
                 focusedIndicatorColor = Color.Gray
             )
         )
@@ -348,6 +351,15 @@ fun ProfileScreen() {
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(
+                text = "Ваши записи:",
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .wrapContentWidth(),
+                textAlign = TextAlign.Center,
+                color = Color.Black,
+                fontSize = 16.sp
+            )
             if (isLoadCards) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -669,7 +681,7 @@ fun AppointmentCard(appointment: Appointment) {
 }
 
 @Composable
-fun SelectImageFromGallery(onImageSelected: (Uri?) -> Unit, selectedImageUri: Uri?) {
+    fun SelectImageFromGallery(onImageSelected: (Uri?) -> Unit, selectedImageUri: Uri?) {
     Log.d("SelectImageFromGallery", "Started, uri = $selectedImageUri")
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),

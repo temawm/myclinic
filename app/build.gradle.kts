@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.gms)
+    alias(libs.plugins.hilt)
+    kotlin("kapt")
 }
 
 android {
@@ -46,11 +48,16 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "/META-INF/gradle/incremental.annotation.processors"
         }
     }
 }
 
 dependencies {
+    kapt(libs.hilt.compiler)
+    implementation(libs.hilt)
+    implementation(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
     implementation(libs.coil.compose)
     implementation(libs.firebase.storage)
     implementation(libs.firebase.firestore)

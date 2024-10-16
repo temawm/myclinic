@@ -114,8 +114,9 @@ fun CatalogScreen(navHostController: NavHostController) {
                     RoundedCornerShape(15.dp)
                 ),
             placeholder = { Text(text = "Гинеколог", color = Color.Gray) },
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = Color.White,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color.White,
+                unfocusedContainerColor = Color.White,
                 cursorColor = colorResource(id = R.color.authorization_mark),
                 focusedIndicatorColor = Color.White,
                 unfocusedIndicatorColor = Color.White,

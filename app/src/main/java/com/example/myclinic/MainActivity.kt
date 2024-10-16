@@ -12,14 +12,15 @@ import com.example.myclinic.screens.HomeScreenChilds.HomeScreen
 import com.example.myclinic.screens.HomeScreenChilds.ProfileScreen
 import com.example.myclinic.screens.LoginScreen
 import com.google.firebase.FirebaseApp
+import dagger.hilt.android.AndroidEntryPoint
 
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            HomeScreen()
+            AppNavGraph()
         }
     }
 }
