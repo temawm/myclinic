@@ -22,64 +22,20 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.example.myclinic.R
-import com.google.firebase.firestore.firestore
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.myclinic.screens.HomeScreenChilds.CatalogViewModel
 
-data class Doctor(
-    val Имя: String = "",
-    val Профессия: String = "",
-    val Опыт: Int = 0,
-    val Рейтинг: Double = 0.0,
-    val profilePictureUrl: String = ""
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CatalogScreen(navHostController: NavHostController) {
-    var search by remember { mutableStateOf("") }
-    val doctorsNames = mapOf(
-        "Gynecologist" to "Гинеколог",
-        "Allergist" to "Аллерголог",
-        "Anesthesiologist" to "Анестезиолог",
-        "Gastroenterologist" to "Гастроэнтеролог",
-        "Dermatologist" to "Дерматолог",
-        "Nutritionist" to "Диетолог",
-        "Infectious Disease Specialist" to "Инфекционист",
-        "Cardiologist" to "Кардиолог",
-        "Mammologist" to "Маммолог",
-        "Addiction Specialist" to "Нарколог",
-        "Neurologist" to "Невролог",
-        "Neurophysiologist" to "Нейрофизиолог",
-        "Neurosurgeon" to "Нейрохирург",
-        "Nutritionist" to "Нутрициолог",
-        "Oncologist" to "Онколог",
-        "Ophthalmologist" to "Офтальмолог",
-        "Pediatrician" to "Педиатр",
-        "Psychiatrist" to "Психиатр",
-        "Psychotherapist" to "Психотерапевт",
-        "Pulmonologist" to "Пульмонолог",
-        "Rheumatologist" to "Ревматолог",
-        "Radiologist" to "Рентгенолог",
-        "Sleep Specialist" to "Сомнолог",
-        "Therapist" to "Терапевт",
-        "Traumatologist" to "Травматолог",
-        "Ultrasound Specialist" to "УЗИ-специалист",
-        "Urologist" to "Уролог",
-        "Physiotherapist" to "Физиотерапевт",
-        "Phlebologist" to "Флеболог",
-        "Chemotherapist" to "Химиотерапевт",
-        "Surgeon" to "Хирург",
-        "Endocrinologist" to "Эндокринолог",
-        "Endoscopist" to "Эндоскопист"
-    )
-
-    val filteredDoctors = doctorsNames.filter { (_, value) ->
-        value.contains(search, ignoreCase = true)
-    }
+fun CatalogScreen(
+    navHostController: NavHostController,
+    CatalogViewModel: CatalogViewModel
+) {
+    val search by CatalogViewModel.search
+    val filteredDoctors by CatalogViewModel.filteredDoctors
 
     Column(
         modifier = Modifier
@@ -102,7 +58,7 @@ fun CatalogScreen(navHostController: NavHostController) {
 
         TextField(
             value = search,
-            onValueChange = { search = it },
+            onValueChange = { CatalogViewModel.onSearchChanged(it) },
             label = { Text("Поиск...", color = Color.Gray) },
             singleLine = true,
             modifier = Modifier
@@ -143,7 +99,7 @@ fun CatalogScreen(navHostController: NavHostController) {
                 .padding(horizontal = 8.dp)
         ) {
             items(filteredDoctors.size) { index ->
-                val (key, value) = filteredDoctors.entries.elementAt(index)
+                val (_, value) = filteredDoctors[index]
                 Button(
                     onClick = {
                         navHostController.navigate("DoctorScreen/$value")

@@ -1,6 +1,5 @@
 package com.example.myclinic.screens.HomeScreenChilds
 
-import Doctor
 import com.example.myclinic.R
 import android.util.Log
 import androidx.compose.foundation.Image
@@ -45,6 +44,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+
+data class Doctor(
+    val Имя: String = "",
+    val Профессия: String = "",
+    val Опыт: Int = 0,
+    val Рейтинг: Double = 0.0,
+    val profilePictureUrl: String = ""
+)
 
 @Composable
 fun DoctorScreen(specialization: String, navHostController: NavHostController) {
